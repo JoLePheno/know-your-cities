@@ -1,0 +1,26 @@
+version: '3.6'
+
+services:
+  
+  go_knowyourcities:
+    container_name: go_knowyourcities
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - ./app:/app
+    ports:
+      - 8080:8080
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./docker/db:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    restart: always
