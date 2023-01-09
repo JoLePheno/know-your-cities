@@ -33,8 +33,11 @@ func main() {
 	}
 	defer f.Close()
 
+
+
 	store := postgres.NewCitiesStore()
 	c := controller.ReaderController{
+		
 		Reader: csv.NewReader(f),
 		CityController: &controller.CityController{
 			HookAdapter: &hook.HookAdapter{},

@@ -13,10 +13,16 @@ import (
 type ReaderController struct {
 	Reader         port.Reader
 	CityController *CityController
+	TotalFileLine  int
+}
+
+type Resp struct {
+	content map[string]interface{}
+	mu      sync.Mutex
 }
 
 func (c *ReaderController) RunReaderController(ctx context.Context) (map[string]interface{}, error) {
-	res := map[string]interface{}{}
+	res := &Resp{content: map[string]interface{}{}}
 	wg := sync.WaitGroup{}
 
 	for {
@@ -34,20 +40,22 @@ func (c *ReaderController) RunReaderController(ctx context.Context) (map[string]
 
 			for _, str := range data {
 				err = c.CityController.IsAValideCity(strings.TrimSpace(str))
+				res.mu.Lock()
 				if err != nil {
 					logger.Ctx(ctx).Warn().Msgf("an error occured during city validation: %s", err.Error())
-					res[str] = err
+					res.content[str] = err
 				} else {
-					res[str] = "OK"
+					res.content[str] = "OK"
 				}
+				res.mu.Unlock()
 			}
 		}(data)
 	}
 
 	wg.Wait()
-	for k, v := range res {
+	for k, v := range res.content {
 		logger.Ctx(ctx).Info().Msgf("%s : %v", k, v)
 	}
 
-	return res, nil
+	return res.content, nil
 }

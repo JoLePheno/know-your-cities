@@ -1,6 +1,7 @@
 package csv
 
 import (
+	"bytes"
 	"encoding/csv"
 	"errors"
 	"io"
@@ -12,8 +13,8 @@ import (
 var _ port.Reader = (*CSVAdapter)(nil)
 
 type CSVAdapter struct {
-	reader   *csv.Reader
-	fileName string
+	reader        *csv.Reader
+	fileName      string
 }
 
 func NewReader(file *os.File) *CSVAdapter {
@@ -33,6 +34,25 @@ func (c *CSVAdapter) Read() ([]string, error) {
 	}
 
 	return data, nil
+}
+
+func (c *CSVAdapter) LineCounter(r io.Reader) (int, error) {
+	buf := make([]byte, 32*1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := r.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+
+		case err != nil:
+			return count, err
+		}
+	}
 }
 
 func (c *CSVAdapter) GetFileName() string {
