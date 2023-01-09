@@ -12,6 +12,14 @@ services:
       - ./app:/app
     ports:
       - 8080:8080
+  
+  go_knowyourcities_migrations:
+    container_name: go_knowyourcities_migrations
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    environment:
+      - POSTGRES_ADDR=postgres:5432
 
   postgres:
     image: postgres

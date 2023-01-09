@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/go-pg/migrations"
 	"github.com/go-pg/pg"
 )
@@ -25,15 +26,27 @@ Usage:
   go run *.go <command> [args]
 `
 
+type config struct {
+	PostgresUser     string `env:"POSTGRES_USER" envDefault:"postgres"`
+	PostgresDatabase string `env:"POSTGRES_DATABASE" envDefault:"postgres"`
+	PostgresPassword string `env:"POSTGRES_PASSWORD" envDefault:"password"`
+	PostgresAddr     string `env:"POSTGRES_ADDR" envDefault:"localhost:5432"`
+}
+
 func main() {
+	var cfg config
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatal("parsing envs failed: %w", err)
+	}
+
 	flag.Usage = usage
 	flag.Parse()
 
 	db := pg.Connect(&pg.Options{
-		User:     "postgres",
-		Database: "postgres",
-		Password: "password",
-		Addr:     "localhost:5432",
+		User:     cfg.PostgresUser,
+		Database: cfg.PostgresDatabase,
+		Password: cfg.PostgresPassword,
+		Addr:     cfg.PostgresAddr,
 	})
 	waitForPostgres(db)
 
