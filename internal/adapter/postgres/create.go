@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/JoLePheno/know-your-cities/internal/model"
@@ -24,26 +23,33 @@ type CityDBO struct {
 
 func (s *CitiesStore) InsertCity(city *model.CityModel) error {
 	err := s.db.RunInTransaction(func(tx *pg.Tx) error {
-		_, err := s.GetCityByName(city.Name)
+		c := &CityDBO{}
 		currentTime := time.Now()
-		c := &CityDBO{
-			UpdatedAt:  currentTime,
-			Name:       city.Name,
-			ExternalID: city.ID,
-			PostCode:   city.ZipCode,
+		err := s.db.Model(c).Where("name = ?", city.Name).Select()
+		if err != nil {
+			if err == pg.ErrNoRows {
+				c.CreatedAt = currentTime
+				c.UpdatedAt = currentTime
+				c.Name = city.Name
+				c.ExternalID = city.ID
+				c.PostCode = city.ZipCode
+				return tx.Insert(c)
+			}
+
+			storedCity := convertCityModelDBOToModel(c)
+			if storedCity.ZipCode == city.ZipCode && storedCity.Name == city.Name && storedCity.ID != city.ID {
+				return port.ErrCityAlreadyStored
+			}
+			return err
 		}
-		if err == port.ErrPgCityNotFound {
-			c.CreatedAt = currentTime
-			return tx.Insert(c)
-		}
+
 		_, err = tx.Model(c).Where("name = ?", city.Name).
 			Set("updated_at = ?", currentTime).
 			Set("external_id = ?", city.ID).Update()
 		return err
-	},
-	)
+	})
+
 	if err != nil {
-		fmt.Println("error when inserting city, err %w", err)
 		return err
 	}
 	return nil
@@ -59,13 +65,15 @@ func (s *CitiesStore) GetCityByName(name string) (*model.CityModel, error) {
 		if err == pg.ErrNoRows {
 			return nil, port.ErrPgCityNotFound
 		}
-		fmt.Println("error when fetching city, err %w", err)
-		return nil, err
+		return convertCityModelDBOToModel(&cityDBO), err
 	}
 	return convertCityModelDBOToModel(&cityDBO), nil
 }
 
 func convertCityModelDBOToModel(cityDBO *CityDBO) *model.CityModel {
+	if cityDBO == nil {
+		return nil
+	}
 	return &model.CityModel{
 		ID:      cityDBO.ExternalID,
 		ZipCode: cityDBO.PostCode,
