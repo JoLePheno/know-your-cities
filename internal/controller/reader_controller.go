@@ -13,7 +13,6 @@ import (
 type ReaderController struct {
 	Reader         port.Reader
 	CityController *CityController
-	TotalFileLine  int
 }
 
 type Resp struct {
