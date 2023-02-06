@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
-	"os"
 
 	"github.com/JoLePheno/know-your-cities/internal/port"
 )
@@ -13,14 +12,14 @@ import (
 var _ port.Reader = (*CSVAdapter)(nil)
 
 type CSVAdapter struct {
-	reader        *csv.Reader
-	fileName      string
+	reader   *csv.Reader
+	fileName string
 }
 
-func NewReader(file *os.File) *CSVAdapter {
+func NewReader(r io.Reader, fileName string) *CSVAdapter {
 	return &CSVAdapter{
-		reader:   csv.NewReader(file),
-		fileName: file.Name(),
+		reader:   csv.NewReader(r),
+		fileName: fileName,
 	}
 }
 
@@ -47,6 +46,9 @@ func (c *CSVAdapter) LineCounter(r io.Reader) (int, error) {
 
 		switch {
 		case err == io.EOF:
+			if len(buf) != 0 {
+				count++
+			}
 			return count, nil
 
 		case err != nil:
