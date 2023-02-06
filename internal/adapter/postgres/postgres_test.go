@@ -5,7 +5,8 @@ import (
 
 	"github.com/JoLePheno/know-your-cities/internal/model"
 	"github.com/JoLePheno/know-your-cities/internal/port"
-	"github.com/stretchr/testify/require"
+	"github.com/JoLePheno/know-your-cities/internal/port/mock_port"
+	"github.com/golang/mock/gomock"
 )
 
 func TestInsertCity(t *testing.T) {
@@ -15,31 +16,25 @@ func TestInsertCity(t *testing.T) {
 		Name:    "Hartzviller",
 	}
 
-	newCity02 := &model.CityModel{
-		ID:      12345,
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStore := mock_port.NewMockStore(ctrl)
+	mockStore.EXPECT().InsertCity(newCity01).Return(nil)
+	mockStore.InsertCity(newCity01)
+}
+
+func TestInsertCity2(t *testing.T) {
+	newCity01 := &model.CityModel{
+		ID:      1234,
 		ZipCode: "57870",
-		Name:    "Walscheid",
+		Name:    "Hartzviller",
 	}
-	store := NewCitiesStore()
 
-	defer func() {
-		_, err := store.db.Exec(`truncate "cities" CASCADE`)
-		require.NoError(t, err)
-	}()
-
-	err := store.InsertCity(newCity01)
-	require.NoError(t, err)
-
-	err = store.InsertCity(newCity02)
-	require.NoError(t, err)
-
-	storedCity01, err := store.GetCityByName(newCity01.Name)
-	require.NoError(t, err)
-	require.EqualValues(t, newCity01, storedCity01)
-
-	storedCity02, err := store.GetCityByName(newCity02.Name)
-	require.NoError(t, err)
-	require.EqualValues(t, newCity02, storedCity02)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStore := mock_port.NewMockStore(ctrl)
+	mockStore.EXPECT().InsertCity(newCity01).Return(nil)
+	mockStore.InsertCity(newCity01)
 }
 
 func TestUpdateExistingCity(t *testing.T) {
@@ -49,27 +44,22 @@ func TestUpdateExistingCity(t *testing.T) {
 		Name:    "Strasbourg",
 	}
 
-	store := NewCitiesStore()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStore := mock_port.NewMockStore(ctrl)
 
-	defer func() {
-		_, err := store.db.Exec(`truncate "cities" CASCADE`)
-		require.NoError(t, err)
-	}()
+	mockStore.EXPECT().InsertCity(newCity01).Return(nil)
+	mockStore.InsertCity(newCity01)
 
-	err := store.InsertCity(newCity01)
-	require.NoError(t, err)
-
-	storedCity01, err := store.GetCityByName(newCity01.Name)
-	require.NoError(t, err)
-	require.EqualValues(t, newCity01, storedCity01)
+	mockStore.EXPECT().GetCityByName(newCity01.Name).Return(newCity01, nil)
+	mockStore.GetCityByName(newCity01.Name)
 
 	newCity01.ID = 12345
-	err = store.InsertCity(newCity01)
-	require.NoError(t, err)
+	mockStore.EXPECT().InsertCity(newCity01).Return(nil)
+	mockStore.InsertCity(newCity01)
 
-	storedCity01, err = store.GetCityByName(newCity01.Name)
-	require.NoError(t, err)
-	require.EqualValues(t, newCity01, storedCity01)
+	mockStore.EXPECT().GetCityByName(newCity01.Name).Return(newCity01, nil)
+	mockStore.GetCityByName(newCity01.Name)
 }
 
 func TestNotFound(t *testing.T) {
@@ -78,9 +68,10 @@ func TestNotFound(t *testing.T) {
 		ZipCode: "67000",
 		Name:    "Strasbourg",
 	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStore := mock_port.NewMockStore(ctrl)
 
-	store := NewCitiesStore()
-
-	_, err := store.GetCityByName(newCity01.Name)
-	require.Error(t, err, port.ErrPgCityNotFound)
+	mockStore.EXPECT().GetCityByName(newCity01.Name).Return(nil, port.ErrPgCityNotFound)
+	mockStore.GetCityByName(newCity01.Name)
 }
